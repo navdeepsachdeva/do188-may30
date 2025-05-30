@@ -1,0 +1,400 @@
+
+
+Good Morning
+
+ Welcome to DO188 Class: Red Hat OpenShift Development I: Introduction to Containers with Podman
+ 
+Audio/ Video / Screen Share
+
+Name:
+Org: If possible
+Experience:
+	Take our free assessment to gauge whether this offering is the best fit for your skills. Some experience with web application architectures and their corresponding technologies. Experience in the use of a Linux terminal session, issuing operating system commands, and familiarity with shell
+scripting is recommended.
+    Linux: mkdir cp mv rm vim(edit) ssh 
+    Installation: DO322
+Expectation:
+Hobbies:
+
+
+Chapter 1: Introduction to Containers
+ 
+ ## Authentication of registry ##
+ ls $XDG_RUNTIME_DIR/containers/auth.json
+ 
+ ## Registry COnfigurations ##
+ sudo vim  /etc/containers/registries.conf
+ 
+ 
+ Podman vs Kubernetes vs Openshift
+ OCP = Kubernetes + WEB Console + Image Registry + S2I +Monitoring + Networking
+ 
+ Google:
+ Map, Mail, Photos, youtube 10 services
+ 2*10=20 billion containers
+ podman inspect db --format '3306/tcp:{{ (index (index .NetworkSettings.Ports "3306/tcp") 0).HostPort }}'
+  podman inspect db --format '3306/tcp:{{ (index (index .NetworkSettings.Ports "3306/tcp") 0).HostIP }}'
+
+ 
+ Chapter 2: Podman Basics
+ 
+ podman -v
+ 
+ ## Search and Pull Image from Specific Registry ##
+ podman search registry.redhat.io/postgresql
+ podman pull registry.redhat.io/rhel9/postgresql-15
+
+## Podman Images commands
+podman images
+podman image inspect IMAGE_NAME/IMAGE_ID
+podman rmi IMAGE_NAME/IMAGE_ID // Remove Specific Image
+podman rmi -af  // Remove all Images
+
+## Running and Displaying Containers
+podman run registry.access.redhat.com/ubi9/ubi-minimal:9.5  cat /etc/passwd
+podman run --rm registry.access.redhat.com/ubi9/ubi-minimal:9.5  cat /etc/passwd
+podman run --name=p1 --detach  registry.access.redhat.com/ubi9/httpd-24
+podman run --name=p1 --detach --publish 172.25.250.9:1212:8080 registry.access.redhat.com/ubi9/httpd-24
+podman port p1
+podman port --all
+podman inspect p1 -f '{{.NetworkSettings.Networks.apps.IPAddress}}'
+podman exec -it p1 ls /var/www/html
+
+podman exec -it p1 bash
+podman cp /HOST_PATH p1:/CONTAINER_PATH
+podman run --name=database --detach --env MYSQL_USER=user1 -e MYSQL_DATABASE=redhat -e MYSQL_PASSWORD=mypa55  -e MYSQL_ROOT_PASSWORD=r00tpa55 --publish 172.25.250.9:3333:3306  registry.access.redhat.com/rhscl/mysql-80-rhel7
+podman ps
+podman ps --all
+
+
+## Podman Network
+podman network create webnet
+podman network inspect webnet
+podman run --name=p1 --detach --net webnet --publish 172.25.250.9:1212:8080 registry.access.redhat.com/ubi9/httpd-24
+
+
+## Container as a Service
+
+## Create Container Service file from Running Container
+mkdir --parents ~/.config/systemd/user/
+cd ~/.config/systemd/user/
+podman generate systemd --name p1  --files --new
+systemctl --user daemon-reload
+systemctl --user enable container-p1.service
+systemctl --user start container-p1.service
+
+
+## Create Container Quadlets File
+mkdir $HOME/.config/containers/systemd/
+cd $HOME/.config/containers/systemd/
+
+	student@workstation systemd]$ cat db.container 
+	[Unit]
+	Description=Nav DB Container
+
+	[Container]
+	ContainerName=db
+	Image=registry.access.redhat.com/rhscl/mysql-80-rhel7:latest
+	Environment=MYSQL_USER=pavlina
+	Environment=MYSQL_PASSWORD=mypa55
+	Environment=MYSQL_DATABASE=ibm
+	Environment=MYSQL_ROOT_PASSWORD=r00tpa55
+	PublishPort=172.25.250.9:3232:3306
+
+	[Install]
+	WantedBy=default.target
+
+
+
+systemctl --user daemon-reload
+ loginctl enable-linger student
+ systemctl --user start db.service
+systemctl --user status db.service
+
+
+Chapter 3: Container Images
+
+## Podman Images commands
+podman images
+podman image inspect IMAGE_NAME/IMAGE_ID
+podman rmi IMAGE_NAME/IMAGE_ID // Remove Specific Image
+podman rmi -af  // Remove all Images
+
+## Image Registry Path
+
+User Specific Path	: 	~/.config/containers/registries.conf
+System Path		:	/etc/containers/registries.conf
+
+
+ ## Difference Podman vs Skopeo ##
+ Podman inspect only images which are pulled/present on local system
+ Skopeo inspect image on website/registry itself
+
+
+cat ${XDG_RUNTIME_DIR}/containers/auth.json
+
+## Skopeo Commands
+
+skopeo  inspect  docker://registry.access.redhat.com/ubi8/ruby-27 | less
+skopeo login quay.io
+cat ${XDG_RUNTIME_DIR}/containers/auth.json
+skopeo copy docker://registry.access.redhat.com/ubi8/ruby-27 docker://quay.io/USER_NAME/myruby:1.0
+
+
+Save Container as Image:
+
+1. Run Container with existing Image
+
+	podman run -d --name=me registry.access.redhat.com/ubi8/httpd-24:latest
+
+2. Make Changes to Container
+
+	podman exec -it me /bin/bash
+	podman diff me
+
+3. Save Container as New Image and Test
+
+	podman stop me
+	podman commit -a "Author_name"  me Image_name  
+	
+4. Tag The Image
+	podman tag d591aa3a8577 quay.io/username/new_image:v1.0
+	podman image tree registry.access.redhat.com/ubi8/httpd-24:latest
+	podman image tree quay.io/username/new_image:v1.0
+
+5. Save Image as Tar File
+
+	podman save -o	me.tar  quay.io/username/new_image:v1.0
+
+6. Test new Container with Tar File Image 
+
+	podman load -i me.tar
+
+7. Push Image to Registry
+
+	podman push quay.io/username/new_image:v1.0
+
+Problem with Previous way:
+1. Reproducing Steps
+2. More operation create more layers that increases size of Image
+
+
+
+Chapter 4: Custom Container Images
+
+Dockerfile/Containerfile // FILE ATTACHED
+
+
+##  SECOND EXAMPLE
+# First stage
+FROM registry.access.redhat.com/ubi8/nodejs-14:1 as builder
+COPY ./ /opt/app-root/src/
+RUN npm install
+RUN npm run build
+# Second stage
+FROM registry.access.redhat.com/ubi8/nodejs-14-minimal:1
+COPY --from=builder /opt/app-root/src/ /opt/app-root/src/
+EXPOSE 8080
+CMD node dist/index.js
+
+
+
+
+You can also create Containerfiles that do not use chained commands, and configure Podman
+to squash the layers. Use the --squash option to squash layers declared in the Containerfile.
+Alternatively, use the --squash-all option to also squash the layers from the parent image.
+
+
+
+
+## Commands to Build Image fom Containerfile
+podman build -t custom_httpd:1.0 .
+podman build --squash -t custom_httpd:1.0 .
+podman build --squash-all -t custom_httpd:1.0 .
+podman build --squash-all -t quay.io/navdeep_sachdeva/custom_httpd:1.0 .
+podman build --file Containerfile --tag quay.io/navdeep_sachdeva/custom_httpd:2.0
+
+		Add								copy 	
+1.		copy from working directory			copy from working directory
+		to image folder					to image folder
+2.		Download from internet				NA 
+		and put in image
+3.		tar file extract and copy contents		copy tar file as it is to image
+		to Image
+
+## Secrets Commands
+echo "R3d4ht123" > dbsecretfile
+podman secret create dbsecret dbsecretfile
+podman secret ls
+podman secret inspect dbsecret 
+printf "R3d4ht123" | podman secret create dbsecret2 -
+podman secret ls
+podman run -it --secret dbsecret --rm registry.access.redhat.com/ubi8/ubi bash
+
+## Rootful vs RootLess Container
+podman run --name=non-p1 --publish 2323:8080 -d registry.access.redhat.com/ubi8/httpd-24:latest
+podman run --name=pri2 --publish 80:80 -d docker.io/library/httpd // only work as root user
+
+
+
+
+Podman maps users inside of the container to unprivileged users on the host system by using
+subordinate ID ranges. Podman defines the allowed ID ranges in the /etc/subuid and /etc/
+subgid files.
+
+The /etc/subuid and /etc/subgid files must exist before you define the
+subordinate ID ranges with the usermod command. After you define the ranges,
+you must execute the podman system migrate for the new subordinate ID
+ranges to take effect.
+
+Similarly, rootless containers cannot use the ping utility by default. This is because the ping
+utility requires elevated privileges to establish raw sockets, which is an action that requires the
+cap_net_raw privilege.
+To solve such a requirement, verify whether you can grant the privilege outside of using
+the root user. For example, you can specify a user range for the ping utility by using the
+net.ipv4.ping_group_range kernel parameter:
+[user@host ~] $ sudo sysctl -w "net.ipv4.ping_group_range=0 2000000"
+
+
+sudo touch /etc/{subuid,subgid}
+sudo usermod --add-subuids 100000-165535 \
+--add-subgids 100000-165535 student
+
+sudo sysctl -w "net.ipv4.ip_unprivileged_port_start=80"
+sudo sysctl -a | grep unprivileged_port
+sudo sysctl -w "net.ipv4.ip_unprivileged_port_start=1024"
+
+
+podman system migrate
+
+
+
+podman run --rm --network cities registry.ocp4.example.com:8443/ubi8/ubi-minimal:8.5 curl -s http://times-app:8080/times/BKK && echo
+
+
+
+Chapter 5: Persisting Data
+
+
+podman volume create VOLUME_NAME
+
+Use -v volume_name:/path/in/container to refer to a volume.
+Alternatively, you can use the --mount parameter with the following syntax:
+--mount type=TYPE,source=/path/on/host,destination=/path/in/container
+
+ podman run --name=web2     --mount type=volume,source=check,destination=/var/www/html/ --publish 2424:8080 -d registry.access.redhat.com/ubi8/httpd-24:latest
+ podman run -d --name=m1 --volume ~/web1:/var/www/html/:Z,rw -p 172.25.250.9:1111:8080 registry.access.redhat.com/ubi8/httpd-24:latest
+ 
+ podman unshare chown -R 27:27 /home/student/dbdata/
+ podman run --name=database --detach --env MYSQL_USER=user1 -e MYSQL_DATABASE=ibm -e MYSQL_PASSWORD=mypa55  -e MYSQL_ROOT_PASSWORD=r00tpa55 --volume /home/student/dbdata/:/var/lib/mysql/data/:Z --publish 172.25.250.9:3333:3306  registry.access.redhat.com/rhscl/mysql-80-rhel7
+podman run -p 8080:8080 --volume /www:/var/www/html:ro registry.access.redhat.com/ubi8/httpd-24:latest
+
+
+podman volume create ibm-web
+podman volume ls
+podman volume inspect ibm-web
+
+podman volume inspect http-data
+podman run -p 8080:8080 --volume http-data:/var/www/html registry.access.redhat.com/ubi8/httpd-24:latest
+
+
+podman volume import http_data web_data.tar.gz
+podman volume export http_data --output web_data.tar.gz
+
+############# Storing Data with a tmpfs Mount ###########
+podman run -e POSTGRESQL_ADMIN_PASSWORD=redhat --network lab-net \
+--mount type=tmpfs,tmpfs-size=512M,destination=/var/lib/pgsql/data \
+registry.redhat.io/rhel9/postgresql-13:1
+
+
+podman unshare ls -ln --directory ~/www
+podman unshare chgrp -R 994 ~/www
+podman unshare ls -ln --directory ~/www
+
+
+podman generate kube man page
+podman generate kube container > pod.yml
+podman play kube pod.yaml
+
+
+Chapter 7: Multi-container Applications with Compose
+
+pip install podman-compose 
+pip install https://github.com/containers/podman-compose/archive/
+devel.tar.gz
+
+## FILE Attached for reference compose.yml
+
+podman-compose up --detach
+podman-compose stop
+podman-compose start
+podman-compose down
+
+
+
+
+
+Chapter 8: Container Orchestration with OpenShift and Kubernetes
+
+Google:
+ 
+ Map, Mail, Photos, youtube 10 services
+ 2*10=20 billion containers
+
+Pod: Wrapper around Running Containers (one or more container)
+pod -> Only to test Container Image/Images
+
+Deployment =  Replicaset(self Healing) + Pod Format (Replica Format)
+oc create deployment ibm-app --image registry.access.redhat.com/ubi8/httpd-24:latest --port 8080 --dry-run=client -o yaml > app-deployment.yml
+
+
+Service =  Internal Load Balancer for pods
+Expose Deployment to create Service
+oc expose deployment ibm-app 
+oc get service
+oc describe service ibm-app
+oc describe endpoints ibm-app
+oc expose deployment ibm-app --dry-run=client -o yaml > app-service.yml
+oc create -f app-service.yml
+
+Route: External Load Bancer for Public   // FQDN URL
+ oc expose service ibm-app
+oc expose service ibm-app --dry-run=client -o yaml > app-route.yml 
+ oc create -f app-route.yml
+ 
+ 
+ ## FIND GUI CONSOLE LINK
+ oc whoami --show-console 
+ 
+ 
+ ## Scale Replicas Manually
+ oc scale --replicas=4 deployment mywebapp
+ // Change into YAML File
+ // Do it via GUI
+ 
+  oc create -f custom-deployment.yml
+ oc get pods,replicaset,service --show-labels
+ watch oc get pods,replicaset,service --show-labels
+ 
+ 
+ ## Delete everything in a project
+   oc delete all --all
+ 
+oc expose pod backend-app \
+--port=8080 \
+--targetPort=8080 \
+--name=backend-app \
+--dry-run=client -o yaml
+
+
+ oc run db-pod --image=registry.access.redhat.com/rhscl/mysql-80-rhel7:latest --port=3306 --env MYSQL_USER=pavlina --env MYSQL_DATABASE=ibm --env MYSQL_PASSWORD=mypa55  --env MYSQL_ROOT_PASSWORD=r00tpa55 --dry-run=client -o yaml >dbpod_command.yml
+ 
+ 
+ oc create deployment mycustom --image=registry.access.redhat.com/ubi8/httpd-24 --port=8080 --dry-run=client -o yaml > mycustom-deployment.yml
+ oc expose service myod  --dry-run=client -o yaml >myroute.yml
+  oc new-app --name=front registry.access.redhat.com/ubi8/httpd-24 --namespace test 
+oc scale --replicas=6 deployment/front
+ oc expose deployment custom --dry-run=client -o yaml
+ 
+ oc expose service custom --dry-run=client -o yaml
+oc expose pod mypod --dry-run=client -o yaml > myservice.yml
