@@ -1,0 +1,21 @@
+apiVersion: v1
+kind: Service
+metadata:
+  creationTimestamp: null
+  labels:
+    app: ibm-app
+  name: ibm-app
+spec:
+  ports:
+  - name: port-1
+    port: 8080
+    protocol: TCP
+    targetPort: 8080
+  - name: port-2
+    port: 3306
+    protocol: TCP
+    targetPort: 3306
+  selector:
+    app: ibm-app
+status:
+  loadBalancer: {}

@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: marko-pod
+  namespace: serbia
+spec:
+  containers:
+    - name: web
+      image: registry.access.redhat.com/ubi8/httpd-24:latest
+      ports:
+        - containerPort: 8080
+          protocol: TCP
+        - containerPort: 8443
+          # protocol: TCP
+# status:

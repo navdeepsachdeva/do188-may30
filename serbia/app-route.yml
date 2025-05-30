@@ -1,0 +1,15 @@
+apiVersion: route.openshift.io/v1
+kind: Route
+metadata:
+  creationTimestamp: null
+  labels:
+    app: ibm-app
+  name: ibm-app
+spec:
+  port:
+    targetPort: port-1
+  to:
+    kind: ""
+    name: ibm-app
+    weight: null
+status: {}

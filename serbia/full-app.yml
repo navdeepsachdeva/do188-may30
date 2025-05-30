@@ -1,0 +1,93 @@
+apiVersion: v1
+items:
+- apiVersion: image.openshift.io/v1
+  kind: ImageStream
+  metadata:
+    annotations:
+      openshift.io/generated-by: OpenShiftNewApp
+    creationTimestamp: null
+    labels:
+      app: webapp
+      app.kubernetes.io/component: webapp
+      app.kubernetes.io/instance: webapp
+    name: webapp
+  spec:
+    lookupPolicy:
+      local: false
+    tags:
+    - annotations:
+        openshift.io/imported-from: registry.access.redhat.com/ubi8/httpd-24:latest
+      from:
+        kind: DockerImage
+        name: registry.access.redhat.com/ubi8/httpd-24:latest
+      generation: null
+      importPolicy:
+        importMode: Legacy
+      name: latest
+      referencePolicy:
+        type: ""
+  status:
+    dockerImageRepository: ""
+- apiVersion: apps/v1
+  kind: Deployment
+  metadata:
+    annotations:
+      image.openshift.io/triggers: '[{"from":{"kind":"ImageStreamTag","name":"webapp:latest"},"fieldPath":"spec.template.spec.containers[?(@.name==\"webapp\")].image"}]'
+      openshift.io/generated-by: OpenShiftNewApp
+    creationTimestamp: null
+    labels:
+      app: webapp
+      app.kubernetes.io/component: webapp
+      app.kubernetes.io/instance: webapp
+    name: webapp
+  spec:
+    replicas: 4
+    selector:
+      matchLabels:
+        deployment: webapp
+    strategy: {}
+    template:
+      metadata:
+        annotations:
+          openshift.io/generated-by: OpenShiftNewApp
+        creationTimestamp: null
+        labels:
+          deployment: webapp
+      spec:
+        containers:
+        - image: 'registry.access.redhat.com/ubi8/httpd-24:latest'
+          name: webapp
+          ports:
+          - containerPort: 8080
+            protocol: TCP
+          - containerPort: 8443
+            protocol: TCP
+          resources: {}
+  status: {}
+- apiVersion: v1
+  kind: Service
+  metadata:
+    annotations:
+      openshift.io/generated-by: OpenShiftNewApp
+    creationTimestamp: null
+    labels:
+      app: webapp
+      app.kubernetes.io/component: webapp
+      app.kubernetes.io/instance: webapp
+    name: webapp
+  spec:
+    ports:
+    - name: 8080-tcp
+      port: 8080
+      protocol: TCP
+      targetPort: 8080
+    - name: 8443-tcp
+      port: 8443
+      protocol: TCP
+      targetPort: 8443
+    selector:
+      deployment: webapp
+  status:
+    loadBalancer: {}
+kind: List
+metadata: {}

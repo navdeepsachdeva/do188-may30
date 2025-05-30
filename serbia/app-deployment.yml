@@ -1,0 +1,37 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  creationTimestamp: null
+  labels:
+    app: ibm-app
+  name: ibm-app
+spec:
+  replicas: 4
+  selector:
+    matchLabels:
+      app: ibm-app
+  template:
+    metadata:
+      creationTimestamp: null
+      labels:
+        app: ibm-app
+    spec:
+      containers:
+        - image: registry.access.redhat.com/ubi8/httpd-24:latest
+          name: web
+          ports:
+          - containerPort: 8080
+        - name: database
+          image: registry.access.redhat.com/rhscl/mysql-80-rhel7:latest
+          ports:
+            - containerPort: 3306
+          env: 
+            - name: MYSQL_USER
+              value: pavlina
+            - name: MYSQL_DATABASE
+              value: ibm
+            - name: MYSQL_PASSWORD
+              value: mypa55
+            - name: MYSQL_ROOT_PASSWORD
+              value: r00tpa55
+
