@@ -1,0 +1,28 @@
+FROM registry.access.redhat.com/ubi8/ubi
+LABEL description="Custom DO188 Web Image"
+USER root
+ARG HELLO="HOW EVERYTGING going oN"
+RUN yum install -y httpd && \
+    useradd default && \
+    yum install bind-utils -y && \
+    sed -ie 's/^Listen 80/Listen 8080/' /etc/httpd/conf/httpd.conf && \
+    echo "TRYING $HELLO" > /var/www/html/you.html && \
+    chown -R apache:apache /etc/httpd/logs/ && \
+    chown -R apache:apache /run/httpd/ && \
+    yum clean all
+
+EXPOSE 8080
+WORKDIR /var/www/html/
+ENV VAR1="Value1" \
+    WEB_USER=apache
+# ADD	index.html /var/www/html/
+ADD     index.html back.tar https://assets.ubuntu.com/v1/b93fecb3-ubuntu-manuals-lockup.svg /var/www/html/
+# ADD 	back.tar /tmp
+COPY	p.html back.tar /var/www/html/
+# COPY 	back.tar /var/www/html/
+USER apache
+# ENTRYPOINT ["/usr/sbin/httpd"]
+CMD ["/usr/sbin/httpd","-D", "FOREGROUND"]
+# ENTRYPOINT ["/usr/bin/date"]
+# CMD ["+%D"]
+# CMD ["/usr/bin/date","+%D"]

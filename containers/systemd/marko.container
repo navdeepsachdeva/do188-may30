@@ -1,0 +1,9 @@
+[Unit]
+Description=Marko Web Container
+
+[Container]
+ContainerName=marko-web
+Image=registry.access.redhat.com/ubi8/httpd-24:latest
+
+[Install]
+WantedBy=default.target

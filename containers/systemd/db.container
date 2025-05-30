@@ -1,0 +1,14 @@
+[Unit]
+Description=Nav DB Container
+
+[Container]
+ContainerName=db
+Image=registry.access.redhat.com/rhscl/mysql-80-rhel7:latest
+Environment=MYSQL_USER=pavlina
+Environment=MYSQL_PASSWORD=mypa55
+Environment=MYSQL_DATABASE=ibm
+Environment=MYSQL_ROOT_PASSWORD=r00tpa55
+PublishPort=172.25.250.9:3232:3306
+
+[Install]
+WantedBy=default.target

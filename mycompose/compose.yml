@@ -1,0 +1,40 @@
+services:
+  first:
+    container_name: web
+    image: registry.access.redhat.com/ubi8/httpd-24:latest
+    ports:
+      - 172.25.250.9:1111:8080
+      - 172.25.250.9:2222:8080
+    volumes:
+      - ibm-web:/var/www/html/
+    networks:
+      - webnet
+      - extra-net
+
+  second:
+    container_name: database
+    image: registry.access.redhat.com/rhscl/mysql-80-rhel7:latest
+    ports:
+      - 172.25.250.9:3333:3306
+    volumes:
+      - ibm-db:/var/lib/mysql/data/
+      # - db:/tmp
+    environment:
+      MYSQL_USER: pavlina
+      MYSQL_DATABASE: ibm
+      MYSQL_PASSWORD: mypa55
+      MYSQL_ROOT_PASSWORD: r00tpa55
+    networks:
+      - dbnet
+      - extra-net
+
+volumes:
+  ibm-web:
+    external: true
+  ibm-db: {}
+networks:
+  extra-net: {}
+  webnet:
+    external: true
+  dbnet:
+    external: true
